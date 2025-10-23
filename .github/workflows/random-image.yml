@@ -1,0 +1,34 @@
+name: Update Random Image
+on:
+  schedule:
+    - cron: "0 */6 * * *"  # every 6 hours
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Pick random image and update README
+        run: |
+          IMAGES=(
+            "https://raw.githubusercontent.com/archpup/images/main/Untitled119_20251023194142.png"
+            "https://raw.githubusercontent.com/archpup/images/main/Untitled119_20251023194138.png"
+          )
+
+          RANDOM_IMAGE=${IMAGES[$RANDOM % ${#IMAGES[@]}]}
+          echo "Selected image: $RANDOM_IMAGE"
+
+          sed -i "s|!\[Random Image\](.*)|![Random Image]($RANDOM_IMAGE)|" README.md
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Update random image: $(date)" || echo "No changes to commit"
+          git push
+          
