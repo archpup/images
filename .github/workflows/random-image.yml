@@ -1,34 +1,51 @@
-name: Update Random Image
+name: Update current random image
+
 on:
   schedule:
-    - cron: "0 */6 * * *"  # every 6 hours
-  workflow_dispatch:
+    - cron: '*/5 * * * *'  # runs every 5 minutes
+  workflow_dispatch:        # lets you run it manually
 
 jobs:
-  update:
+  random-image:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Pick random image and update README
+      - name: Pick random image (not same as last)
         run: |
-          IMAGES=(
-            "https://raw.githubusercontent.com/archpup/images/main/Untitled119_20251023194142.png"
-            "https://raw.githubusercontent.com/archpup/images/main/Untitled119_20251023194138.png"
-          )
+          mkdir -p public
+          
+          # List all PNG images in the repo
+          IMAGES=($(ls *.png))
+          COUNT=${#IMAGES[@]}
+          
+          # Get the name of the last image used, if exists
+          if [ -f public/last.txt ]; then
+            LAST=$(cat public/last.txt)
+          else
+            LAST=""
+          fi
+          
+          # Pick a new random image, different from last one
+          RANDOM_IMAGE="$LAST"
+          while [ "$RANDOM_IMAGE" == "$LAST" ]; do
+            RANDOM_IMAGE=${IMAGES[$RANDOM % COUNT]}
+          done
+          
+          echo "Selected: $RANDOM_IMAGE"
+          
+          # Copy the chosen image to public/current.png
+          cp "$RANDOM_IMAGE" public/current.png
+          
+          # Save the chosen filename to remember it next time
+          echo "$RANDOM_IMAGE" > public/last.txt
 
-          RANDOM_IMAGE=${IMAGES[$RANDOM % ${#IMAGES[@]}]}
-          echo "Selected image: $RANDOM_IMAGE"
-
-          sed -i "s|!\[Random Image\](.*)|![Random Image]($RANDOM_IMAGE)|" README.md
-
-      - name: Commit and push changes
+      - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git commit -m "Update random image: $(date)" || echo "No changes to commit"
+          git add public/current.png public/last.txt
+          git commit -m "Update current random image"
           git push
-          
